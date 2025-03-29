@@ -1,0 +1,462 @@
+const processService = require("../service/process.js");
+const trackerService = require("../service/tracker.js");
+const chartService = require("../service/charts.js");
+const schemaService = require("../service/schema.js");
+const getUpcomingProcessService = require("../service/get_upcoming_process.js");
+const successParameterService = require("../service/success_parameter.js");
+const processScheduleService = require("../service/process_schedule.js")
+const { buildResponse } = require("../utils/buildResponse");
+
+
+
+const routeHandler = {
+    '/process': async (event) =>{
+        if (event.httpMethod === "GET") {
+            const process_id = event.queryStringParameters.process_id;
+            return await processService.getProcessById(process_id);
+        }else if(event.httpMethod === "PUT"){
+            const requestBody = JSON.parse(event.body);
+            return await processService.editProcess(requestBody);
+        }else if (event.httpMethod === "PATCH") {
+            const requestBody = JSON.parse(event.body);
+            if (!Array.isArray(requestBody.ids)) {
+                return buildResponse(400, "Invalid request body. Expected an array of IDs.");
+            }
+            return await processService.deactivateProcesses(requestBody.ids);
+        }else if (event.httpMethod === "POST") {
+            const workspace_id = event.queryStringParameters.workspace;
+            const org_id = event.queryStringParameters.organization;
+            const requestBody = JSON.parse(event.body);
+            const body = {...requestBody,workspace_id,org_id};
+            return await processService.getAllProcess(body);
+        }
+    },
+    '/process/success_parameter': async (event) =>{
+        if (event.httpMethod === "POST") {
+            const requestBody = JSON.parse(event.body);
+            return await successParameterService.createsuccessParameter(requestBody);
+        }
+        else if(event.httpMethod === "GET") {
+            return await successParameterService.getAllSuccessParameters();
+        }
+    },
+    '/process/get_success_parameter_by_workspaceId': async (event) =>{
+        if (event.httpMethod === "GET") {
+            const workspace_id = event.queryStringParameters?.workspace_id;
+            return await successParameterService.getSuccessParameterByWorkspaceId(workspace_id);
+        }
+    },
+    '/process/get_upcoming_process': async (event) =>{
+        if (event.httpMethod === "GET") {
+            const workspace_id = event.queryStringParameters.workspace;
+            return await getUpcomingProcessService.getUpcomingProcess(workspace_id);
+        }
+    },
+    
+
+
+
+
+
+
+    '/process/dropdown':async (event) =>{
+        if (event.httpMethod === "GET") {
+            const workspace_id = event.queryStringParameters.workspace_id;
+            return await processService.getProcessesByWorkspace(workspace_id);
+        }
+    }, // REMOVE AFTERWARDS.
+
+    '/process/schedule': async (event)=>{
+        if (event.httpMethod === "PUT") {
+            const requestBody = JSON.parse(event.body);
+            return await processScheduleService.processSchedule(requestBody);
+        }
+    },
+    
+    '/process/list': async (event)=>{
+        if (event.httpMethod === "GET") {
+            const workspace_id = event.queryStringParameters.workspace;
+            return await processService.getProcessesByWorkspace(workspace_id);
+        }
+    },
+    '/process/process-stage': async (event) =>{
+        if(event.httpMethod ==="GET"){
+            const process_id = event.queryStringParameters.process_id;
+            return await processService.getProcessDetails(process_id);
+        }
+    }, // REMOVE AFTERWARDS.
+    '/process/stage/activities': async (event)=>{
+        if(event.httpMethod ==="GET"){
+            const process_id = event.queryStringParameters.process_id;
+            return await processService.getProcessDetails(process_id);
+        } 
+    },
+
+    '/process/process-dashboard': async (event)=>{
+        if(event.httpMethod ==="POST"){
+            const filters = JSON.parse(event.body);
+            return await processService.getProcessesDetailsByWorkspace(filters);
+        }
+    },// REMOVE AFTERWARDS
+    '/process/dashboard': async (event)=>{
+        if(event.httpMethod ==="POST"){
+            const workspace_id = event.queryStringParameters.workspace;
+            const filters = JSON.parse(event.body);
+            const body = {...filters,workspace_id};
+            return await processService.getProcessesDetailsByWorkspace(body);
+        }
+    },
+    '/process/status/counts': async (event)=>{
+        if(event.httpMethod ==="GET"){
+            const workspace_id = event.queryStringParameters.workspace;
+            return await processService.countProcessStatus(workspace_id);
+        }
+    }, 
+
+    '/process/planner-status': async (event)=>{
+        if(event.httpMethod ==="GET"){
+            return await processService.getProcessPlannerStatus();
+        }
+    }, // REMOVE AFTERWARDS
+    '/process/planner/status': async (event)=>{
+        if(event.httpMethod ==="GET"){
+            return await processService.getProcessPlannerStatus();
+        }
+    },
+
+    '/process/update-status': async (event)=>{
+        if(event.httpMethod ==="POST"){
+            const requestBody = JSON.parse(event.body);
+            return await processService.updateProcessStageStatus(requestBody);
+        }
+    }, // REMOVE AFTERWARDS
+
+    '/process/update/status': async (event)=>{
+        if(event.httpMethod ==="POST"){
+            const requestBody = JSON.parse(event.body);
+            return await processService.updateProcessStageStatus(requestBody);
+        }
+    },
+
+    '/process/process_status': async (event)=>{
+        if(event.httpMethod ==="GET"){
+            return await processService.getAllProcessStatus();
+        }
+    }, // REMOVE AFTERWARDS
+    '/process/status': async (event)=>{
+        if(event.httpMethod ==="GET"){
+            return await processService.getAllProcessStatus();
+        }else if(event.httpMethod ==="PUT"){
+            const process_id = event.queryStringParameters.process;
+            return await processService.updateProcessStatus(process_id);
+        }
+    },
+
+    '/process/add-process-stage-delay': async(event)=>{
+        if(event.httpMethod==="POST"){
+            const requestBody = JSON.parse(event.body);
+            return await processService.addProcessStageDelay(requestBody);
+        }
+    }, // REMOVE AFTERWARDS.
+    '/process/stage/delay': async(event)=>{
+        if(event.httpMethod==="POST"){
+            const org_id = event.queryStringParameters.organization;
+            const requestBody = JSON.parse(event.body);
+            const body = {...requestBody,org_id};
+            return await processService.addProcessStageDelay(body);
+        }
+    },
+    '/process/financial-charts': async (event) => {
+        if (event.httpMethod === "GET") {
+            const queryParams = event.queryStringParameters;
+            if (!queryParams || !queryParams.process_id) {
+                return buildResponse('400', "No process id found");
+            }
+            const process_id = queryParams.process_id;
+            return await processService.processFinancialChart(process_id);
+        }
+    }, // REMOVE AFTERWARDS.
+    '/process/financials': async (event) => {
+        if (event.httpMethod === "GET") {
+            const queryParams = event.queryStringParameters;
+            if (!queryParams || !queryParams.process_id) {
+                return buildResponse('400', "No process id found");
+            }
+            const process_id = queryParams.process_id;
+            return await processService.processFinancialChart(process_id);
+        }
+    },
+
+    '/process/planner': async (event) => {
+        if (event.httpMethod === "PUT") {
+            const requestBody = JSON.parse(event.body);
+            return await processService.processPlanner(requestBody);
+        }
+        if (event.httpMethod === "GET") {
+            const queryParams = event.queryStringParameters;
+            if (!queryParams || !queryParams.process_id) {
+                return buildResponse('400', "No process id found");
+            }
+            const process_id = queryParams.process_id;
+            return await processService.getProcessPlanner(process_id);
+        }
+    },
+
+    '/delay/reasons': async (event) => {
+        if (event.httpMethod === "GET") {
+            return await processService.getDelayReasons();
+        }
+    },
+    '/process/delay/reasons': async (event) => {
+        if (event.httpMethod === "GET") {
+            return await processService.getDelayReasons();
+        }
+    },
+    '/process/delays/get': async (event) => {
+        if (event.httpMethod === "POST") {
+            const requestBody = JSON.parse(event.body);
+            return await processService.getProcessStagesDelay(requestBody);
+        }
+    }, // REMOVE AFTERWARDS.
+    '/process/delay': async (event) => {
+        if (event.httpMethod === "POST") {
+            const requestBody = JSON.parse(event.body);
+            return await processService.getProcessStagesDelay(requestBody);
+        }
+    },
+    '/process/process-stage-status':async(event)=>{
+        if(event.httpMethod === "GET"){
+            return await processService.getProcessStageStatus();
+        }
+    },// REMOVE AFTERWARDS.
+
+    '/process/stage/status':async(event)=>{
+        if(event.httpMethod === "GET"){
+            return await processService.getProcessStageStatus();
+        }
+    },
+    '/process/planner/delay': async(event)=>{
+        if(event.httpMethod ==="POST"){
+            const requestBody = JSON.parse(event.body);
+            return await processService.updateProcessStageDelayAndPlanner(requestBody);
+        }
+    },
+    '/process/tracker': async (event)=>{
+        if(event.httpMethod === "POST"){
+            const requestBody = JSON.parse(event.body);
+            return await trackerService.addTrackerData(requestBody);
+        }
+        else if(event.httpMethod ==="PUT"){
+            const requestBody = JSON.parse(event.body);
+            return await trackerService.updateTrackerSchema(requestBody);
+        }
+        else if(event.httpMethod === "GET"){
+            const process_id = event.queryStringParameters.process_id;
+            return await trackerService.getTrackerSchema(process_id);
+        } else if(event.httpMethod ==="PATCH"){
+            const requestBody = JSON.parse(event.body);
+            return await trackerService.disableTrackerSchemaField(requestBody);
+        }
+    },
+    '/process/tracker/list': async (event)=>{
+        if(event.httpMethod ==="GET"){
+            const process_id = event.queryStringParameters.process_id;
+            return await trackerService.getTrackerDataByProcessId(process_id);
+        }
+    },
+    '/process/tracker/deactivate': async (event)=>{
+        if(event.httpMethod === "PATCH"){
+            const tracker_id = event.queryStringParameters.tracker_id;
+            return await trackerService.deactivateTrackerEntry(tracker_id);
+        }
+    },
+    '/process/chart': async(event) =>{
+        if(event.httpMethod ==="POST"){
+            const requestBody = JSON.parse(event.body);
+            return chartService.updateChartForProcess(requestBody);
+        } else if(event.httpMethod === "GET"){
+            const process_id = event.queryStringParameters.process_id;
+            return chartService.getChartAttributesByProcessId(process_id);
+        } else if(event.httpMethod === "PUT"){
+            const requestBody = JSON.parse(event.body);
+            return await chartService.updateChartAttributeByProcessId(requestBody);
+        }
+    },
+    '/process/chart/data': async (event) =>{
+        if(event.httpMethod === "GET"){
+            const process_id = event.queryStringParameters.process_id;
+            return chartService.getChartDataByProcessId(process_id);
+        }
+    },
+    '/process/tracker/data': async (event)=>{
+        if(event.httpMethod ==="PUT"){
+            const requestBody = JSON.parse(event.body);
+            return await trackerService.editTrackerData(requestBody);
+        }else if(event.httpMethod === "PATCH"){
+            const id = event.queryStringParameters.id;
+            return await trackerService.deactivateTrackerData(id);
+        }
+    },
+    '/process/schema': async (event) =>{
+        if(event.httpMethod === "GET"){
+            const workspace_id = event.queryStringParameters.workspace;
+            return  schemaService.getProcessSchema(workspace_id);
+        } else if(event.httpMethod === "PUT"){
+            const requestBody = JSON.parse(event.body);
+            return schemaService.updateSchema(requestBody);
+        }
+    }
+
+};
+
+
+
+
+
+
+const notFoundHandler = () => {
+    return buildResponse(404, 'Not Found');
+};
+
+module.exports = { routeHandler, notFoundHandler };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const AWS = require("aws-sdk");
+const { buildResponse } = require("../utils/buildResponse");
+const { docClient } = require("../utils/dynamoDB");
+const { generateUniqueId } = require("../utils/generateUniqueId");
+const TABLE_NAME = "success_parameter";
+ 
+const createsuccessParameter = async (requestBody) => {
+    try {
+        const { name, workspace_id, type_of } = requestBody;
+
+        if (!name || typeof workspace_id !== "string") {
+            return buildResponse(400, "Invalid name or project_id");
+        }
+ 
+        const newSuccessParam = {
+            value : null , 
+            id: generateUniqueId(),
+            name,
+            workspace_id,
+            type_of: type_of || "boolean" , 
+            created_by: "system generated",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+
+        };
+ 
+        const params = {
+            TableName: TABLE_NAME,
+            Item: newSuccessParam,
+        };
+
+        await docClient.put(params).promise();
+        
+        return buildResponse(200 , {
+            message: "Success Parameter created successfully",
+            data: newSuccessParam,
+        })
+    } 
+    catch (error) {
+        console.error("Error creating Success Parameter:", error);
+        return buildResponse(500, "Internal Server Error", { error: error.message });
+    }
+};
+
+const getAllSuccessParameters = async () => {
+    try {
+        const params = {
+            TableName: TABLE_NAME,
+        };
+
+        const data = await docClient.scan(params).promise();
+
+        return buildResponse(200,{ successParameters: data.Items })
+
+    } catch (error) {
+        console.error("Error fetching success parameters:", error);
+        return buildResponse(500, "Internal Server Error", { error: error.message });
+    }
+};
+
+const getSuccessParameterByWorkspaceId = async (requestBody) => {
+    try {
+      const workspace_id = requestBody;
+  
+      if (!workspace_id) {
+        return buildResponse(400,"Invalid workspace_id");
+      }
+
+      const params = {
+        TableName: TABLE_NAME,
+        IndexName: "workspace_id-index", 
+        KeyConditionExpression: "workspace_id = :workspace_id",
+        ExpressionAttributeValues: {
+          ":workspace_id": workspace_id,
+        },
+      };
+
+      const result = await dynamoDB.query(params).promise();
+  
+      return buildResponse(200,{
+        message: "Success Parameters fetched successfully",
+        data: result.Items || [],
+      })
+    } catch (error) {
+      console.error("Error fetching Success Parameters:", error);
+      return buildResponse(500, "Internal Server Error", { error: error.message });
+    }
+  };
+ 
+module.exports = { createsuccessParameter,getAllSuccessParameters, getSuccessParameterByWorkspaceId };
+
+ 
